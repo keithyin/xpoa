@@ -8,68 +8,70 @@
 
 using namespace PacBio::Align;
 
-namespace PacBio {
-namespace Poa {
-
-// forward declaration
-struct PoaConsensus;
-
-//
-// PIMPL idiom delegation
-//
-void PoaGraph::AddRead(const std::string& sequence, const AlignConfig& config,
-                       detail::SdpRangeFinder* rangeFinder, std::vector<Vertex>* readPathOutput)
+namespace PacBio
 {
-    impl->AddRead(sequence, config, rangeFinder, readPathOutput);
-}
+    namespace Poa
+    {
 
-void PoaGraph::AddFirstRead(const std::string& sequence, std::vector<Vertex>* readPathOutput)
-{
-    impl->AddFirstRead(sequence, readPathOutput);
-}
+        // forward declaration
+        struct PoaConsensus;
 
-PoaAlignmentMatrix* PoaGraph::TryAddRead(const std::string& sequence, const AlignConfig& config,
-                                         detail::SdpRangeFinder* rangeFinder) const
-{
-    return impl->TryAddRead(sequence, config, rangeFinder);
-}
+        //
+        // PIMPL idiom delegation
+        //
+        void PoaGraph::AddRead(const std::string &sequence, const AlignConfig &config,
+                               detail::SdpRangeFinder *rangeFinder, std::vector<Vertex> *readPathOutput)
+        {
+            impl->AddRead(sequence, config, rangeFinder, readPathOutput);
+        }
 
-void PoaGraph::CommitAdd(PoaAlignmentMatrix* mat, std::vector<Vertex>* readPathOutput)
-{
-    impl->CommitAdd(mat, readPathOutput);
-}
+        void PoaGraph::AddFirstRead(const std::string &sequence, std::vector<Vertex> *readPathOutput)
+        {
+            impl->AddFirstRead(sequence, readPathOutput);
+        }
 
-void PoaGraph::PruneGraph(const int minCoverage) { impl->PruneGraph(minCoverage); }
+        PoaAlignmentMatrix *PoaGraph::TryAddRead(const std::string &sequence, const AlignConfig &config,
+                                                 detail::SdpRangeFinder *rangeFinder) const
+        {
+            return impl->TryAddRead(sequence, config, rangeFinder);
+        }
 
-size_t PoaGraph::NumReads() const { return impl->NumReads(); }
+        void PoaGraph::CommitAdd(PoaAlignmentMatrix *mat, std::vector<Vertex> *readPathOutput)
+        {
+            impl->CommitAdd(mat, readPathOutput);
+        }
 
-const PoaConsensus* PoaGraph::FindConsensus(const AlignConfig& config, int minCoverage) const
-{
-    return impl->FindConsensus(config, minCoverage);
-}
+        void PoaGraph::PruneGraph(const int minCoverage) { impl->PruneGraph(minCoverage); }
 
-string PoaGraph::ToGraphViz(int flags, const PoaConsensus* pc) const
-{
-    return impl->ToGraphViz(flags, pc);
-}
+        size_t PoaGraph::NumReads() const { return impl->NumReads(); }
 
-void PoaGraph::WriteGraphVizFile(const string& filename, int flags, const PoaConsensus* pc) const
-{
-    impl->WriteGraphVizFile(filename, flags, pc);
-}
+        const PoaConsensus *PoaGraph::FindConsensus(const AlignConfig &config, int minCoverage) const
+        {
+            return impl->FindConsensus(config, minCoverage);
+        }
 
-void PoaGraph::WriteGraphCsvFile(const string& filename) const
-{
-    impl->WriteGraphCsvFile(filename);
-}
+        string PoaGraph::ToGraphViz(int flags, const PoaConsensus *pc) const
+        {
+            return impl->ToGraphViz(flags, pc);
+        }
 
-PoaGraph::PoaGraph() { impl = new detail::PoaGraphImpl(); }
+        void PoaGraph::WriteGraphVizFile(const string &filename, int flags, const PoaConsensus *pc) const
+        {
+            impl->WriteGraphVizFile(filename, flags, pc);
+        }
 
-PoaGraph::PoaGraph(const PoaGraph& other) { impl = new detail::PoaGraphImpl(*other.impl); }
+        void PoaGraph::WriteGraphCsvFile(const string &filename) const
+        {
+            impl->WriteGraphCsvFile(filename);
+        }
 
-PoaGraph::PoaGraph(const detail::PoaGraphImpl& o) { impl = new detail::PoaGraphImpl(o); }
+        PoaGraph::PoaGraph() { impl = new detail::PoaGraphImpl(); }
 
-PoaGraph::~PoaGraph() { delete impl; }
+        PoaGraph::PoaGraph(const PoaGraph &other) { impl = new detail::PoaGraphImpl(*other.impl); }
 
-}  // namespace Poa
-}  // namespace PacBio
+        PoaGraph::PoaGraph(const detail::PoaGraphImpl &o) { impl = new detail::PoaGraphImpl(o); }
+
+        PoaGraph::~PoaGraph() { delete impl; }
+
+    } // namespace Poa
+} // namespace PacBio
