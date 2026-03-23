@@ -54,6 +54,9 @@ const _: () = {
     ["Offset of field: Result::n_passes"][::std::mem::offset_of!(Result, n_passes) - 8usize];
 };
 unsafe extern "C" {
+    pub fn PoaDraftFreeResult(result: Result);
+}
+unsafe extern "C" {
     pub fn PoaDraftGen(reads: *const Subread, num_sbr: usize, setting: *const PoaSetting)
         -> Result;
 }

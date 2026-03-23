@@ -156,9 +156,9 @@ extern "C"
         return poa.FindConsensus(minCov, *settings, &(*summaries))->Sequence;
     }
 
-    void FreePoaResult(Result result)
+    void PoaDraftFreeResult(Result result)
     {
-        delete[] result.seq;
+        free(result.seq);
     }
 
     Result PoaDraftGen(const Subread *reads, size_t num_sbr, const PoaSetting *setting)

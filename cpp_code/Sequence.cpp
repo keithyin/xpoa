@@ -6,7 +6,7 @@
 
 using namespace std::literals::string_literals;  // for std::operator ""s
 
-#include <Sequence.h>
+#include "Sequence.h"
 
 namespace PacBio {
 namespace Data {

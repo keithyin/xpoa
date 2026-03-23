@@ -36,7 +36,7 @@ extern "C"
         size_t n_passes;
     };
 
-    void FreePoaResult(Result result);
+    void PoaDraftFreeResult(Result result);
 
     Result PoaDraftGen(const Subread *reads, size_t num_sbr, const PoaSetting *setting);
 
