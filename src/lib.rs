@@ -8,9 +8,10 @@ mod xpoa_sys;
 use crate::{
     dna::reverse_complement,
     xpoa::{PoaResult, TSubread},
-    xpoa_sys::{PoaDraftGen, PoaDraftGenWithAllFwdStrand, PoaSetting, Subread},
+    xpoa_sys::{PoaDraftGen, PoaDraftGenWithAllFwdStrand, Subread},
 };
 pub mod xpoa;
+pub use xpoa_sys::PoaSetting;
 
 pub fn poa_consensus<T: TSubread>(
     read_infos: &[T],
