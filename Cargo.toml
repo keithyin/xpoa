@@ -2,9 +2,9 @@
 name = "xpoa"
 version = "0.1.0"
 edition = "2024"
-
+description = "xpoa"
+repository ="https://github.com/keithyin/xpoa"
 [build-dependencies]
-cmake = "0.1"
 num_cpus = "1.16.0"
 
 [dependencies]
