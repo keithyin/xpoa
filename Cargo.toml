@@ -3,6 +3,7 @@ name = "xpoa"
 version = "0.1.0"
 edition = "2024"
 description = "xpoa"
+license = "MIT"
 repository ="https://github.com/keithyin/xpoa"
 [build-dependencies]
 num_cpus = "1.16.0"
