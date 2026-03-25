@@ -138,4 +138,14 @@ mod tests {
         let res = poa_consensus(&sequences, &get_default_poa_setting());
         println!("res:{:?}", res);
     }
+    
+    #[test]
+    fn test_poa_consensus_range_finder2() {
+        let sequences = vec!["AACGGATCGGA", "AACGGATCGGA", "AACGGATCGGA", "AACGGATCGGA"];
+        let mut setting = get_default_poa_setting();
+        setting.version = 2;
+
+        let res = poa_consensus(&sequences, &setting);
+        println!("res:{:?}", res);
+    }
 }
