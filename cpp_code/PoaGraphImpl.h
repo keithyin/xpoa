@@ -32,6 +32,8 @@ namespace detail {
 
 // FWD
 class SdpRangeFinder;
+class SdpRangeFinderV1;
+class SdpRangeFinderV2;
 
 struct PoaNode
 {
@@ -98,7 +100,8 @@ inline std::vector<ED> inEdges(VD v, const BoostGraph& g)
 class PoaGraphImpl
 {
     friend class SdpRangeFinder;
-
+    friend class SdpRangeFinderV1;
+    friend class SdpRangeFinderV2;
     BoostGraph g_;
     VertexInfoMap vertexInfoMap_;  // NB: this is a reference type and refers to
                                    // an "internal" property map

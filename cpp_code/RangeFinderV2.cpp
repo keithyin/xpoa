@@ -10,13 +10,15 @@
 #include <boost/graph/topological_sort.hpp>
 #include <boost/optional.hpp>
 #include <boost/range/adaptor/reversed.hpp>
-
+#include "SparseAlignment.h"
 #include "RangeFinder.h"
+#include "RangeFinderV2.h"
 
 #include "PoaGraphImpl.h"
 
 #define WIDTH 30
 #define DEBUG_RANGE_FINDER 0
+#define KMER 6 
 
 #if DEBUG_RANGE_FINDER
 #include <iostream>
@@ -31,15 +33,11 @@ namespace PacBio
         namespace detail
         {
 
-            using boost::optional;
-            using std::max;
-            using std::min;
-
-            SdpRangeFinder::~SdpRangeFinder() = default;
-            void SdpRangeFinder::InitRangeFinder(const PoaGraphImpl &poaGraph,
-                                                 const std::vector<Vertex> &consensusPath,
-                                                 const std::string &consensusSequence,
-                                                 const std::string &readSequence)
+            SdpRangeFinderV2::~SdpRangeFinderV2() = default;
+            void SdpRangeFinderV2::InitRangeFinder(const PoaGraphImpl &poaGraph,
+                                                   const std::vector<Vertex> &consensusPath,
+                                                   const std::string &consensusSequence,
+                                                   const std::string &readSequence)
             {
 #if DEBUG_RANGE_FINDER
                 poaGraph.WriteGraphVizFile("debug-graph.dot", PoaGraph::VERBOSE_NODES, NULL);
@@ -80,6 +78,14 @@ namespace PacBio
 #endif
                         directRanges[v] = Interval(max(int(anchor->second) - WIDTH, 0),
                                                    min(int(anchor->second) + WIDTH, readLength));
+                        // add more bound
+                        for (int i = 1; i < KMER; i++)
+                        {
+                            Vertex vExt = consensusPath[cssPos + i];
+                            VD v = poaGraph.internalize(vExt);
+                            directRanges[v] = Interval(max(int(anchor->second + i) - WIDTH, 0),
+                                                       min(int(anchor->second + i) + WIDTH, readLength));
+                        }
                     }
                     else
                     {
@@ -161,9 +167,10 @@ namespace PacBio
                 }
             }
 
-            Interval SdpRangeFinder::FindAlignableRange(Vertex v)
+            SdpAnchorVector SdpRangeFinderV2::FindAnchors(const std::string &consensusSequence,
+                                                          const std::string &readSequence) const
             {
-                return alignableReadIntervalByVertex_.at(v);
+                return CCS::SparseAlign(KMER, consensusSequence, readSequence);
             }
 
         } // namespace detail

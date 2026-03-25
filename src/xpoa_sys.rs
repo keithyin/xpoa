@@ -9,10 +9,11 @@ pub struct PoaSetting {
     pub insertion_score: ::std::os::raw::c_int,
     pub deletion_score: ::std::os::raw::c_int,
     pub ed_unify_strand: ::std::os::raw::c_int,
+    pub version: ::std::os::raw::c_int,
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of PoaSetting"][::std::mem::size_of::<PoaSetting>() - 24usize];
+    ["Size of PoaSetting"][::std::mem::size_of::<PoaSetting>() - 28usize];
     ["Alignment of PoaSetting"][::std::mem::align_of::<PoaSetting>() - 4usize];
     ["Offset of field: PoaSetting::min_identity"]
         [::std::mem::offset_of!(PoaSetting, min_identity) - 0usize];
@@ -26,6 +27,7 @@ const _: () = {
         [::std::mem::offset_of!(PoaSetting, deletion_score) - 16usize];
     ["Offset of field: PoaSetting::ed_unify_strand"]
         [::std::mem::offset_of!(PoaSetting, ed_unify_strand) - 20usize];
+    ["Offset of field: PoaSetting::version"][::std::mem::offset_of!(PoaSetting, version) - 24usize];
 };
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

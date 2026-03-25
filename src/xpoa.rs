@@ -48,6 +48,7 @@ pub fn get_default_poa_setting() -> PoaSetting {
         insertion_score: -2,
         deletion_score: -2,
         ed_unify_strand: 1,
+        version: 1,
     }
 }
 

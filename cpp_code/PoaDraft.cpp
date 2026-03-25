@@ -68,7 +68,7 @@ extern "C"
                                  const size_t maxPoaCov,
                                  const PoaSetting *settings)
     {
-        SparsePoa poa;
+        SparsePoa poa(settings->version);
         size_t cov = 0;
 
         readKeys->clear();

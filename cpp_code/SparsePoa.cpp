@@ -13,6 +13,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "RangeFinderV2.h"
+#include "RangeFinderV1.h"
 
 using PacBio::Align::AlignConfig;
 using PacBio::Align::AlignMode;
@@ -92,15 +94,27 @@ namespace PacBio
             }
         }
 
-        SdpAnchorVector SdpRangeFinder::FindAnchors(const std::string &consensusSequence,
-                                                    const std::string &readSequence) const
+        SparsePoa::SparsePoa()
+            : graph_(new PoaGraph()), readPaths_(), reverseComplemented_(), rangeFinder_(new PacBio::Poa::detail::SdpRangeFinderV1())
         {
-            return CCS::SparseAlign(6, consensusSequence, readSequence);
         }
 
-        SparsePoa::SparsePoa()
-            : graph_(new PoaGraph()), readPaths_(), reverseComplemented_(), rangeFinder_(new SdpRangeFinder())
+        SparsePoa::SparsePoa(int version)
+            : graph_(new PoaGraph()), readPaths_(), reverseComplemented_()
         {
+            if (version == 1)
+            {
+                rangeFinder_ = new PacBio::Poa::detail::SdpRangeFinderV1();
+            }
+            else if (version == 2)
+            {
+                rangeFinder_ = new PacBio::Poa::detail::SdpRangeFinderV2();
+            }
+            else
+            {
+                std::cerr << "invalid version: " << version << std::endl;
+                throw "invalid version";
+            }
         }
 
         SparsePoa::~SparsePoa()

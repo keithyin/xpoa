@@ -10,5 +10,6 @@ extern "C"
         int insertion_score = -2;
         int deletion_score = -2;
         int ed_unify_strand = 1;
+        int version = 1;
     };
 }
