@@ -138,7 +138,7 @@ mod tests {
         let res = poa_consensus(&sequences, &get_default_poa_setting());
         println!("res:{:?}", res);
     }
-    
+
     #[test]
     fn test_poa_consensus_range_finder2() {
         let sequences = vec!["AACGGATCGGA", "AACGGATCGGA", "AACGGATCGGA", "AACGGATCGGA"];
@@ -146,6 +146,19 @@ mod tests {
         setting.version = 2;
 
         let res = poa_consensus(&sequences, &setting);
+        println!("res:{:?}", res);
+    }
+
+    #[test]
+    fn test_poa_consensus_very_short() {
+        let sequences = vec!["A", "C", "A", "C", "A", "A"];
+
+        let res = poa_consensus(&sequences, &get_default_poa_setting());
+        println!("res:{:?}", res);
+
+        let sequences = vec!["AC", "CA", "AC", "AC", "G", "T"];
+
+        let res = poa_consensus(&sequences, &get_default_poa_setting());
         println!("res:{:?}", res);
     }
 }
