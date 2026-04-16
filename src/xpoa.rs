@@ -48,7 +48,7 @@ pub fn get_default_poa_setting() -> PoaSetting {
         insertion_score: -2,
         deletion_score: -2,
         ed_unify_strand: 1,
-        version: 1,
+        version: 1, // version 2 意味着使用 range_finder2
     }
 }
 

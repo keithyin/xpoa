@@ -80,6 +80,8 @@ pub fn poa_consensus_fwd<T: TSubread>(
     }
 }
 
+/// reads info 的 is_fwd 需要被设置
+/// rust端 调整 query 的方向，然后调用 c++ 端的 PoaDraftGenWithAllFwdStrand
 pub fn poa_consensus_v2<T: TSubread>(
     read_infos: &[T],
     setting: &PoaSetting,
@@ -129,7 +131,7 @@ pub fn poa_consensus_v2<T: TSubread>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{poa_consensus, xpoa::get_default_poa_setting};
+    use crate::{poa_consensus, poa_consensus_fwd, xpoa::get_default_poa_setting};
 
     #[test]
     fn test_poa_consensus() {
@@ -159,6 +161,16 @@ mod tests {
         let sequences = vec!["AC", "CA", "AC", "AC", "G", "T"];
 
         let res = poa_consensus(&sequences, &get_default_poa_setting());
+        println!("res:{:?}", res);
+    }
+
+    #[test]
+    fn test_poa_consensus_fwd() {
+        let sequences = vec!["AACGGATCGGA", "AACGGATCGGA", "AACGGATCGGA", "AACGGATCGGA"];
+        let mut setting = get_default_poa_setting();
+        setting.version = 2;
+
+        let res = poa_consensus_fwd(&sequences, &setting);
         println!("res:{:?}", res);
     }
 }
