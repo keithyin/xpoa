@@ -48,7 +48,10 @@ jobs:
         run: cargo test --release
       - name: Test (pure Rust)
         run: cargo test --release --no-default-features
-      - name: Package (default features, verifies shipped crate)
+      - name: Package (default features, verify w/ env-injected headers)
+        env:
+          XPOA_BOOST_INCLUDE: ${{ github.workspace }}/third_party/boost/include
+          XPOA_SEQAN_INCLUDE: ${{ github.workspace }}/third_party/seqan/include
         run: cargo package
       - name: Package (pure Rust)
         run: cargo package --no-default-features
@@ -56,7 +59,7 @@ jobs:
   publish:
     name: publish to crates.io
     needs: verify
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     env:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
@@ -65,19 +68,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: no-cpp
-      - name: Install toolchain deps (cmake / Boost / zlib)
-        run: sudo apt-get update && sudo apt-get install -y build-essential cmake libboost-dev zlib1g-dev
-      - name: Fetch SeqAn 2.4.0 headers (third_party)
-        run: |
-          cd /tmp
-          curl -sL -o seqan240.tar.gz https://github.com/seqan/seqan/archive/refs/tags/seqan-v2.4.0.tar.gz
-          tar xzf seqan240.tar.gz
-          mkdir -p "$GITHUB_WORKSPACE/third_party/seqan/include"
-          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/third_party/seqan/include/seqan"
-      # cargo publish 自带打包校验(default features,含 cpp 构建路径),
-      # job 内已安装 Boost/SeqAn,verify 可正常执行
+      # 发布的 .crate 内容(features 声明等)与 feature 选择无关;
+      # verify 用纯 Rust 构建执行,无需 C++ 环境。下游若启用 cpp feature
+      # 需自行提供 Boost/SeqAn(见 README)。
       - name: Publish to crates.io
-        run: cargo publish
+        run: cargo publish --no-default-features
       - name: Create GitHub Release
         run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
         env:

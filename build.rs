@@ -1,6 +1,6 @@
 use std::{
     env,
-    path::Path,
+    path::{Path, PathBuf},
     process::{Command, ExitStatus},
 };
 fn check_command_status(status: ExitStatus, msg: &str) {
@@ -37,12 +37,22 @@ fn main() {
     let c_src_file_dir = &c_src_file_dir;
     let current_dir = env::current_dir().unwrap();
 
-    // 本地 third_party 头文件(优先于系统路径);见 third_party/README.md
+    // third_party 头文件(优先于系统路径);见 third_party/README.md。
+    // 查找顺序:环境变量 XPOA_BOOST_INCLUDE / XPOA_SEQAN_INCLUDE(供
+    // `cargo package`/`cargo publish` 的 verify 构建使用 —— 其工作目录是
+    // 解包目录,cwd 相对路径会失效)> cwd 相对的 third_party/。
     let mut third_party_includes = String::new();
-    for dir in ["third_party/boost/include", "third_party/seqan/include"] {
-        let p = current_dir.join(dir);
-        if p.is_dir() {
-            third_party_includes.push_str(&format!(" -I{}", p.to_str().unwrap()));
+    let boost_dir = env::var("XPOA_BOOST_INCLUDE")
+        .ok()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| current_dir.join("third_party/boost/include"));
+    let seqan_dir = env::var("XPOA_SEQAN_INCLUDE")
+        .ok()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| current_dir.join("third_party/seqan/include"));
+    for dir in [boost_dir, seqan_dir] {
+        if dir.is_dir() {
+            third_party_includes.push_str(&format!(" -I{}", dir.to_str().unwrap()));
         }
     }
 
