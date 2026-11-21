@@ -31,7 +31,15 @@ jobs:
         run: cargo fmt --check
       # clippy --all-targets 同时编译 bench/examples/tests,并校验 cpp 构建
       - name: clippy (zero warnings enforced)
-        run: cargo clippy --release --all-targets -- -D warnings
+        run: |
+          set -o pipefail
+          cargo clippy --release --all-targets -- -D warnings 2>&1 | tee clippy.log
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clippy-log
+          path: clippy.log
 
   # 纯 Rust 后端:零 C++ 依赖,golden 快照必须重现
   test-native:
@@ -65,7 +73,15 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/third_party/seqan/include"
           cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/third_party/seqan/include/seqan"
       - name: Build & test (both backends)
-        run: cargo test --release
+        run: |
+          set -o pipefail
+          cargo test --release 2>&1 | tee test.log
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log
+          path: test.log
       - name: Regenerate golden snapshots & verify reproducibility
         run: |
           cargo run --release --example golden_gen
