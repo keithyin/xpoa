@@ -72,7 +72,7 @@ pub struct HpHasher {
 
 impl HpHasher {
     pub fn new(q: usize) -> Self {
-        let dna = [b'A', b'C', b'G', b'T'];
+        let dna: [u8; 4] = *b"ACGT";
         let mut hashes = [0u64; 4];
         for (i, &base) in dna.iter().enumerate() {
             let mut h = base_code(base);

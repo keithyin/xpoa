@@ -36,7 +36,7 @@ impl DetRng {
     }
 }
 
-pub const BASES: [u8; 4] = [b'A', b'C', b'G', b'T'];
+pub const BASES: [u8; 4] = *b"ACGT";
 
 // LocalContextFlags 与 cpp_code/PoaDraft.cpp 保持一致
 pub const ADAPTER_BEFORE: i32 = 1;

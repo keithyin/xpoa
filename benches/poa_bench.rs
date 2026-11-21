@@ -39,7 +39,7 @@ impl DetRng {
     }
 }
 
-const BASES: [u8; 4] = [b'A', b'C', b'G', b'T'];
+const BASES: [u8; 4] = *b"ACGT";
 
 fn make_reads(seed: u64, n_reads: usize, ref_len: usize, err_rate: f64) -> Vec<TestRead> {
     let mut rng = DetRng::new(seed);
