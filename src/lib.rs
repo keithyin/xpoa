@@ -1,7 +1,6 @@
-use std::{
-    borrow::Cow,
-    ffi::{CString, c_int},
-};
+use std::{borrow::Cow, ffi::c_int};
+#[cfg(feature = "cpp")]
+use std::ffi::CString;
 mod dna;
 #[cfg(feature = "cpp")]
 mod xpoa_sys;
