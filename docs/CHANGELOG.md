@@ -35,6 +35,12 @@ C++ 核心算法完全以 Rust 重写,双后端共存、运行时可切换,结�
 - **调试工具**:`examples/native_case.rs`、`examples/native_dump.rs`、
   `tools/dump_case.cpp`、`tools/dump_cols.cpp`(双端图/列/锚点差分定位)
 - `third_party/README.md`:Boost 1.74 / SeqAn 2.4.0 头文件的免 root 获取步骤
+- **GitHub Actions CI/CD**(`.github/workflows/`):
+  - `ci.yml`:push/PR 触发 —— fmt + clippy(零警告强制)、纯 Rust 测试、
+    双后端测试 + golden 快照跨环境复现校验
+  - `release.yml`:`v*` tag 触发 —— tag/版本一致性校验、双后端 + 纯 Rust
+    全量测试、crate 打包校验、发布 crates.io(需仓库 secret
+    `CARGO_REGISTRY_TOKEN`)、创建 GitHub Release
 
 ### Changed
 

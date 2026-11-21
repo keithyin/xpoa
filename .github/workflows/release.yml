@@ -1,8 +1,12 @@
 name: Release
 
-# 推送 v* tag 触发:先跑完整测试,再创建 GitHub Release 并发布 crates.io。
-# crates.io 发布需要仓库 secret CARGO_REGISTRY_TOKEN(未配置时自动跳过发布,
-# 其余步骤照常执行)。
+# 推送 v* tag 触发:
+#   1. verify —— 双后端 + 纯 Rust 全量测试,tag 与 Cargo.toml 版本一致性校验
+#   2. publish —— 发布 crates.io(需要仓库 secret CARGO_REGISTRY_TOKEN),
+#      成功后创建 GitHub Release(auto notes)
+#
+# 注意:cargo publish 失败(如版本已存在)后重跑需先解决 crates.io 侧状态;
+# GitHub Release 若已存在,删除后重跑或改用 patch tag。
 
 on:
   push:
@@ -22,7 +26,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Install Boost headers (apt)
+      - name: Install toolchain deps (cmake / Boost / zlib)
         run: sudo apt-get update && sudo apt-get install -y build-essential cmake libboost-dev zlib1g-dev
       - name: Fetch SeqAn 2.4.0 headers (third_party)
         run: |
@@ -31,15 +35,26 @@ jobs:
           tar xzf seqan240.tar.gz
           mkdir -p "$GITHUB_WORKSPACE/third_party/seqan/include"
           cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/third_party/seqan/include/seqan"
+      - name: Verify tag matches Cargo.toml version
+        run: |
+          CARGO_VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import json,sys; print(json.load(sys.stdin)['packages'][0]['version'])")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::tag v$TAG_VERSION 与 Cargo.toml 版本 $CARGO_VERSION 不一致"
+            exit 1
+          fi
+          echo "tag v$TAG_VERSION == Cargo.toml $CARGO_VERSION ✓"
       - name: Test (both backends)
         run: cargo test --release
       - name: Test (pure Rust)
         run: cargo test --release --no-default-features
-      - name: Package (dry-run, verifies crate contents)
-        run: cargo package --no-default-features --allow-dirty
+      - name: Package (default features, verifies shipped crate)
+        run: cargo package
+      - name: Package (pure Rust)
+        run: cargo package --no-default-features
 
   publish:
-    name: publish
+    name: publish to crates.io
     needs: verify
     runs-on: ubuntu-22.04
     env:
@@ -50,7 +65,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: no-cpp
-      - name: Install Boost headers (apt)
+      - name: Install toolchain deps (cmake / Boost / zlib)
         run: sudo apt-get update && sudo apt-get install -y build-essential cmake libboost-dev zlib1g-dev
       - name: Fetch SeqAn 2.4.0 headers (third_party)
         run: |
@@ -59,10 +74,11 @@ jobs:
           tar xzf seqan240.tar.gz
           mkdir -p "$GITHUB_WORKSPACE/third_party/seqan/include"
           cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/third_party/seqan/include/seqan"
-      - name: Publish to crates.io (skipped without token)
-        if: env.CARGO_REGISTRY_TOKEN != ''
+      # cargo publish 自带打包校验(default features,含 cpp 构建路径),
+      # job 内已安装 Boost/SeqAn,verify 可正常执行
+      - name: Publish to crates.io
         run: cargo publish
       - name: Create GitHub Release
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
