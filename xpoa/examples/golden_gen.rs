@@ -36,11 +36,12 @@ fn run_case(case: &TestCase) -> Result<Option<(String, usize)>, xpoa::error::Xpo
 
 fn main() {
     let cases = generate_cases();
-    let out_dir = Path::new("tests/golden");
-    fs::create_dir_all(out_dir).expect("create tests/golden");
+    // 以 package 目录为基准,避免从 workspace 根执行 cargo run 时写错位置
+    let out_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
+    fs::create_dir_all(&out_dir).expect("create tests/golden");
 
     // 清理旧 golden,保证集合与生成器同步
-    if let Ok(entries) = fs::read_dir(out_dir) {
+    if let Ok(entries) = fs::read_dir(&out_dir) {
         for entry in entries.flatten() {
             if entry.path().extension().is_some_and(|e| e == "json") {
                 fs::remove_file(entry.path()).expect("remove stale golden");

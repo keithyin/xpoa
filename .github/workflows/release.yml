@@ -33,11 +33,12 @@ jobs:
           cd /tmp
           curl -sL -o seqan240.tar.gz https://github.com/seqan/seqan/archive/refs/tags/seqan-v2.4.0.tar.gz
           tar xzf seqan240.tar.gz
-          mkdir -p "$GITHUB_WORKSPACE/third_party/seqan/include"
-          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/third_party/seqan/include/seqan"
+          mkdir -p "$GITHUB_WORKSPACE/xpoa/third_party/seqan/include"
+          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/xpoa/third_party/seqan/include/seqan"
       - name: Verify tag matches Cargo.toml version
         run: |
-          CARGO_VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import json,sys; print(json.load(sys.stdin)['packages'][0]['version'])")
+          # workspace 下按包名取 xpoa 的版本(packages 顺序不保证)
+          CARGO_VERSION=$(cargo metadata --no-deps --format-version 1 | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name'] == 'xpoa'))")
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
             echo "::error::tag v$TAG_VERSION 与 Cargo.toml 版本 $CARGO_VERSION 不一致"
@@ -47,14 +48,17 @@ jobs:
       - name: Test (both backends)
         run: cargo test --release
       - name: Test (pure Rust)
-        run: cargo test --release --no-default-features
-      - name: Package (default features, verify w/ env-injected headers)
+        run: cargo test --release --no-default-features -p xpoa
+      - name: Package xpoa (default features, verify w/ env-injected headers)
         env:
-          XPOA_BOOST_INCLUDE: ${{ github.workspace }}/third_party/boost/include
-          XPOA_SEQAN_INCLUDE: ${{ github.workspace }}/third_party/seqan/include
-        run: cargo package
-      - name: Package (pure Rust)
-        run: cargo package --no-default-features
+          XPOA_BOOST_INCLUDE: ${{ github.workspace }}/xpoa/third_party/boost/include
+          XPOA_SEQAN_INCLUDE: ${{ github.workspace }}/xpoa/third_party/seqan/include
+        run: cargo package -p xpoa
+      - name: Package xpoa (pure Rust)
+        run: cargo package -p xpoa --no-default-features
+      # 注意:xpoa-cli 不能在此处 package/publish —— 其对 xpoa ^0.5.0 的
+      # registry 解析要求 xpoa 已发布,故 cli 的打包验证放在 publish job
+      # (publish 自带验证构建)。
 
   publish:
     name: publish to crates.io
@@ -69,10 +73,16 @@ jobs:
         with:
           key: no-cpp
       # 发布的 .crate 内容(features 声明等)与 feature 选择无关;
-      # verify 用纯 Rust 构建执行,无需 C++ 环境。下游若启用 cpp feature
+      # publish 用纯 Rust 构建执行,无需 C++ 环境。下游若启用 cpp feature
       # 需自行提供 Boost/SeqAn(见 README)。
-      - name: Publish to crates.io
-        run: cargo publish --no-default-features
+      # 顺序:xpoa 先发布并等 crates.io 索引同步后,xpoa-cli 才能解析到
+      # 已发布的 xpoa 版本(path 依赖发布时替换为 version 依赖)。
+      - name: Publish xpoa
+        run: cargo publish -p xpoa --no-default-features
+      - name: Wait for crates.io index propagation
+        run: sleep 30
+      - name: Publish xpoa-cli
+        run: cargo publish -p xpoa-cli --no-default-features
       - name: Create GitHub Release
         run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
         env:

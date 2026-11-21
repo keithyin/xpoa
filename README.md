@@ -26,6 +26,41 @@ setting.version = 2;                  // RangeFinderV2
 - `--no-default-features` 纯 Rust 构建:不需要 cmake/Boost/SeqAn,选 CPP 后端返回
   `Err(XpoaError::CxxBackendUnavailable)`。
 
+## CLI:xpoa-cli(按分组生成 consensus)
+
+仓库为 Cargo workspace:`xpoa/`(lib,上述 API)与 `xpoa-cli/`(命令行工具)。
+clap/rayon/indicatif 仅是 CLI 依赖,lib 依赖树不受影响。
+
+```bash
+cargo install --path xpoa-cli                  # 本地安装(默认含 cpp 后端)
+cargo install --path xpoa-cli --no-default-features   # 纯 Rust 安装,零 C++ 依赖
+xpoa-cli input.fa -o consensus.fa
+```
+
+输入 FASTA 的每个 qname 以 `|group=GROUP_ID` 结尾,**相同 GROUP_ID 的序列必须连续
+出现**(否则 panic)。每组经 POA 生成 consensus,以 GROUP_ID 为 qname 输出,顺序与
+输入组顺序一致:
+
+```
+>read_1|group=sampleA      →      >sampleA
+ACGT...                           <consensus>
+>read_2|group=sampleA
+ACGT...
+>read_3|group=sampleB      →      >sampleB
+TTGA...                           <consensus>
+```
+
+| 参数 | 说明 |
+|---|---|
+| `-o, --output <PATH>` | 输出 FASTA(缺省 stdout) |
+| `-t, --threads <N>` | 并行 consensus 线程数(0 = 全核) |
+| `--backend <cpp\|rust>` | POA 后端(缺省 = 编译期默认) |
+| `--poa-version <1\|2>` | POA 算法版本(默认 1) |
+| `-w, --line-width <N>` | 输出折行宽度,默认 60(0 = 单行) |
+
+读/算/写为流水线处理(reader 线程解析分组 → rayon 并行计算 → 按序写出),
+进度条输出到 stderr。
+
 ## API
 
 三个入口均返回 `XpoaResult<Option<(String, usize)>>`:
@@ -82,11 +117,13 @@ edlib/DP 的位运算也逐行对应 —— 因此 2.1× 是容器与内存布�
 
 ## C++ 构建期依赖
 
-默认构建需要 cmake 与 Boost/SeqAn 头文件(获取步骤见 `third_party/README.md`);
+默认构建需要 cmake 与 Boost/SeqAn 头文件(获取步骤见 `xpoa/third_party/README.md`);
 纯 Rust 构建完全不需要。详见 [CLAUDE.md](CLAUDE.md) 与
-[docs/CHANGELOG.md](docs/CHANGELOG.md)。
+[xpoa/docs/CHANGELOG.md](xpoa/docs/CHANGELOG.md)。
 
 ## bindgen 再生成(改 C++ 接口头文件后)
+
+在 `xpoa/` 目录下执行:
 
 ```
 bindgen cpp_code/PoaDraft.h \

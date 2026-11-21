@@ -7,19 +7,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 xpoa 生成 DNA 测序的 partial-order alignment (POA) 共识序列,源自 PacBio pbcopper/unanimity。
 **v0.5.0 起为双后端架构**:
 
-- **Rust 后端**(`src/native/`,默认推荐):纯 Rust 重写,零 C++/Boost/SeqAn 依赖
-- **C++ 后端**(`cpp_code/`):历史实现,经 bindgen FFI 链接 `libxpoa.a`
+- **Rust 后端**(`xpoa/src/native/`,默认推荐):纯 Rust 重写,零 C++/Boost/SeqAn 依赖
+- **C++ 后端**(`xpoa/cpp_code/`):历史实现,经 bindgen FFI 链接 `libxpoa.a`
 
 两后端**运行时可切换**(见下),结果保证逐字符一致(由差分测试体系保证)。
+
+**仓库布局(Cargo workspace)**:根为 virtual workspace;`xpoa/` 为 lib package,
+`xpoa-cli/` 为 CLI package(按分组生成 consensus 的命令行工具,依赖
+clap/rayon/indicatif,与 lib 依赖完全隔离)。virtual workspace 下带 feature
+参数的 cargo 命令需显式 `-p` 指定包。
 
 ## Key Build Commands
 
 ```bash
-cargo build --release          # 默认构建:Rust + C++ 双后端(需要 cmake + third_party 头文件)
+cargo build --release          # workspace 全量:lib 双后端 + xpoa-cli(需 cmake + third_party 头文件)
 cargo test --release           # 全部测试:单测 + 差分(golden + 属性式)
-cargo test --release --no-default-features   # 纯 Rust 构建(无 cmake/Boost/SeqAn)
+cargo test --release --no-default-features -p xpoa   # 纯 Rust 构建(无 cmake/Boost/SeqAn)
 cargo bench                    # criterion 双后端性能对比
-cargo clippy --release --all-targets && cargo fmt --check
+cargo clippy --release --workspace --all-targets && cargo fmt --check
+cargo run -p xpoa-cli -- input.fa -o out.fa   # CLI:按分组生成 consensus
 ```
 
 ### Backend Selection(运行时)
@@ -39,8 +45,8 @@ C++ 后端被裁掉(`--no-default-features`)时选 CPP 返回 `Err(XpoaError::Cx
 
 迁移正确性由三层测试保证,任何算法改动后必须全部通过:
 
-1. **Golden 快照**(`tests/golden/*.json`,161 case):`cargo run --release --example golden_gen`
-   以 C++ 后端生成期望值,`tests/golden_tests.rs` 断言 Rust 后端重现。
+1. **Golden 快照**(`xpoa/tests/golden/*.json`,161 case):`cargo run --release -p xpoa --example golden_gen`
+   以 C++ 后端生成期望值,`xpoa/tests/golden_tests.rs` 断言 Rust 后端重现。
 2. **属性式对拍**(`tests/diff_tests.rs`):随机生成的用例在同一进程内实时对拍两后端。
 3. **单元/穷举对拍**(`src/native/*` 各模块 `#[cfg(test)]`):edlib 对暴力 DP、种子查找对
    穷举搜索等独立参照。
@@ -56,7 +62,7 @@ C++ 后端被裁掉(`--no-default-features`)时选 CPP 返回 `Err(XpoaError::Cx
 ### Rust Side
 
 ```
-src/
+xpoa/src/
 ├── lib.rs           # 公共 API(poa_consensus*,Result),按 setting.backend 分发
 ├── error.rs         # XpoaError 唯一定义点(thiserror)
 ├── setting.rs       # PoaSetting 唯一定义点(repr(C),含 backend 字段)
@@ -84,7 +90,7 @@ src/
 
 ### C++ Side(保留未改)
 
-`cpp_code/` 原样保留(仅 `Settings.h` 末尾加了 `backend` 字段用于布局同步,C++ 端忽略其值)。
+`xpoa/cpp_code/` 原样保留(仅 `Settings.h` 末尾加了 `backend` 字段用于布局同步,C++ 端忽略其值)。
 `build.rs` 在 `CARGO_FEATURE_CPP` 存在时经 CMake 构建 `libxpoa.a`。
 
 ## Fidelity Notes(移植必须知道的行为细节)
@@ -122,7 +128,7 @@ PoaSetting {
 
 ## Third-party(C++ 构建期依赖,不进 git)
 
-`third_party/README.md` 有完整获取步骤(boost 1.74 头文件、seqan 2.4.0 头文件);
+`xpoa/third_party/README.md` 有完整获取步骤(boost 1.74 头文件、seqan 2.4.0 头文件);
 `build.rs` 自动把存在的目录注入 `-I`。纯 Rust 构建完全不需要它们。
 
 ## Benchmark

@@ -25,15 +25,15 @@ jobs:
           cd /tmp
           curl -sL -o seqan240.tar.gz https://github.com/seqan/seqan/archive/refs/tags/seqan-v2.4.0.tar.gz
           tar xzf seqan240.tar.gz
-          mkdir -p "$GITHUB_WORKSPACE/third_party/seqan/include"
-          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/third_party/seqan/include/seqan"
+          mkdir -p "$GITHUB_WORKSPACE/xpoa/third_party/seqan/include"
+          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/xpoa/third_party/seqan/include/seqan"
       - name: rustfmt
         run: cargo fmt --check
-      # clippy --all-targets 同时编译 bench/examples/tests,并校验 cpp 构建
+      # clippy --workspace --all-targets 覆盖 lib/bin/bench/examples/tests,并校验 cpp 构建
       - name: clippy (zero warnings enforced)
         run: |
           set -o pipefail
-          cargo clippy --release --all-targets -- -D warnings 2>&1 | tee clippy.log || {
+          cargo clippy --release --workspace --all-targets -- -D warnings 2>&1 | tee clippy.log || {
             grep -inE "error" clippy.log | head -8 | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
           }
@@ -55,7 +55,7 @@ jobs:
         with:
           key: no-cpp
       - name: Build & test (pure Rust)
-        run: cargo test --release --no-default-features
+        run: cargo test --release --no-default-features -p xpoa
 
   # 双后端:C++ 经 apt(Boost)与 third_party(SeqAn)提供头文件;
   # 并重新生成 golden,校验 C++ 输出跨环境可复现
@@ -73,8 +73,8 @@ jobs:
           cd /tmp
           curl -sL -o seqan240.tar.gz https://github.com/seqan/seqan/archive/refs/tags/seqan-v2.4.0.tar.gz
           tar xzf seqan240.tar.gz
-          mkdir -p "$GITHUB_WORKSPACE/third_party/seqan/include"
-          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/third_party/seqan/include/seqan"
+          mkdir -p "$GITHUB_WORKSPACE/xpoa/third_party/seqan/include"
+          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/xpoa/third_party/seqan/include/seqan"
       - name: Build & test (both backends)
         run: |
           set -o pipefail
@@ -90,5 +90,5 @@ jobs:
           path: test.log
       - name: Regenerate golden snapshots & verify reproducibility
         run: |
-          cargo run --release --example golden_gen
-          git diff --exit-code tests/golden
+          cargo run --release -p xpoa --example golden_gen
+          git diff --exit-code xpoa/tests/golden

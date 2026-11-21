@@ -10,8 +10,8 @@ C++ 后端的系统依赖(不进 git,构建期专用)。
   cd /tmp && mkdir boost_dl && cd boost_dl
   apt-get download libboost1.74-dev
   dpkg -x libboost1.74-dev_*.deb extracted
-  mkdir -p <repo>/third_party/boost/include
-  cp -r extracted/usr/include/boost <repo>/third_party/boost/include/boost
+  mkdir -p <repo>/xpoa/third_party/boost/include
+  cp -r extracted/usr/include/boost <repo>/xpoa/third_party/boost/include/boost
   ```
 
 - `seqan/include/seqan/` — SeqAn 2.4.0 头文件(header-only)。
@@ -19,8 +19,8 @@ C++ 后端的系统依赖(不进 git,构建期专用)。
   cd /tmp
   curl -sL -o seqan240.tar.gz https://github.com/seqan/seqan/archive/refs/tags/seqan-v2.4.0.tar.gz
   tar xzf seqan240.tar.gz
-  mkdir -p <repo>/third_party/seqan/include
-  cp -r seqan-seqan-v2.4.0/include/seqan <repo>/third_party/seqan/include/seqan
+  mkdir -p <repo>/xpoa/third_party/seqan/include
+  cp -r seqan-seqan-v2.4.0/include/seqan <repo>/xpoa/third_party/seqan/include/seqan
   ```
 
 `build.rs` 会把这两个目录作为 `-I` 传给 CMake;目录缺失时 build 仍会走系统 include 路径
