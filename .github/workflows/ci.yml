@@ -33,7 +33,10 @@ jobs:
       - name: clippy (zero warnings enforced)
         run: |
           set -o pipefail
-          cargo clippy --release --all-targets -- -D warnings 2>&1 | tee clippy.log
+          cargo clippy --release --all-targets -- -D warnings 2>&1 | tee clippy.log || {
+            grep -E "^error" clippy.log | head -5 | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
       - name: Upload logs
         if: failure()
         uses: actions/upload-artifact@v4
@@ -75,7 +78,10 @@ jobs:
       - name: Build & test (both backends)
         run: |
           set -o pipefail
-          cargo test --release 2>&1 | tee test.log
+          cargo test --release 2>&1 | tee test.log || {
+            grep -E "^error|panicked" test.log | head -8 | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
       - name: Upload logs
         if: failure()
         uses: actions/upload-artifact@v4
