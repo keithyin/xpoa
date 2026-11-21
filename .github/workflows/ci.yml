@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    name: fmt & clippy
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Boost headers (apt)
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev
+      - name: Fetch SeqAn 2.4.0 headers (third_party)
+        run: |
+          cd /tmp
+          curl -sL -o seqan240.tar.gz https://github.com/seqan/seqan/archive/refs/tags/seqan-v2.4.0.tar.gz
+          tar xzf seqan240.tar.gz
+          mkdir -p "$GITHUB_WORKSPACE/third_party/seqan/include"
+          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/third_party/seqan/include/seqan"
+      - name: rustfmt
+        run: cargo fmt --check
+      # clippy --all-targets 同时编译 bench/examples/tests,并校验 cpp 构建
+      - name: clippy (zero warnings enforced)
+        run: cargo clippy --release --all-targets -- -D warnings
+
+  # 纯 Rust 后端:零 C++ 依赖,golden 快照必须重现
+  test-native:
+    name: tests (native backend, no cpp)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: no-cpp
+      - name: Build & test (pure Rust)
+        run: cargo test --release --no-default-features
+
+  # 双后端:C++ 经 apt(Boost)与 third_party(SeqAn)提供头文件;
+  # 并重新生成 golden,校验 C++ 输出跨环境可复现
+  test-both-backends:
+    name: tests (both backends) + golden reproducibility
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Boost headers (apt)
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev
+      - name: Fetch SeqAn 2.4.0 headers (third_party)
+        run: |
+          cd /tmp
+          curl -sL -o seqan240.tar.gz https://github.com/seqan/seqan/archive/refs/tags/seqan-v2.4.0.tar.gz
+          tar xzf seqan240.tar.gz
+          mkdir -p "$GITHUB_WORKSPACE/third_party/seqan/include"
+          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/third_party/seqan/include/seqan"
+      - name: Build & test (both backends)
+        run: cargo test --release
+      - name: Regenerate golden snapshots & verify reproducibility
+        run: |
+          cargo run --release --example golden_gen
+          git diff --exit-code tests/golden

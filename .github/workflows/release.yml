@@ -1,0 +1,68 @@
+name: Release
+
+# 推送 v* tag 触发:先跑完整测试,再创建 GitHub Release 并发布 crates.io。
+# crates.io 发布需要仓库 secret CARGO_REGISTRY_TOKEN(未配置时自动跳过发布,
+# 其余步骤照常执行)。
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  verify:
+    name: verify (both backends)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Boost headers (apt)
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev
+      - name: Fetch SeqAn 2.4.0 headers (third_party)
+        run: |
+          cd /tmp
+          curl -sL -o seqan240.tar.gz https://github.com/seqan/seqan/archive/refs/tags/seqan-v2.4.0.tar.gz
+          tar xzf seqan240.tar.gz
+          mkdir -p "$GITHUB_WORKSPACE/third_party/seqan/include"
+          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/third_party/seqan/include/seqan"
+      - name: Test (both backends)
+        run: cargo test --release
+      - name: Test (pure Rust)
+        run: cargo test --release --no-default-features
+      - name: Package (dry-run, verifies crate contents)
+        run: cargo package --no-default-features --allow-dirty
+
+  publish:
+    name: publish
+    needs: verify
+    runs-on: ubuntu-22.04
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: no-cpp
+      - name: Install Boost headers (apt)
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev
+      - name: Fetch SeqAn 2.4.0 headers (third_party)
+        run: |
+          cd /tmp
+          curl -sL -o seqan240.tar.gz https://github.com/seqan/seqan/archive/refs/tags/seqan-v2.4.0.tar.gz
+          tar xzf seqan240.tar.gz
+          mkdir -p "$GITHUB_WORKSPACE/third_party/seqan/include"
+          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/third_party/seqan/include/seqan"
+      - name: Publish to crates.io (skipped without token)
+        if: env.CARGO_REGISTRY_TOKEN != ''
+        run: cargo publish
+      - name: Create GitHub Release
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
