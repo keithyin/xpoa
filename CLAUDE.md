@@ -4,151 +4,128 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Rust wrapper around the xpoa C++ library for partial-order alignment consensus sequence generation in DNA sequence analysis. The library builds a C++ static library during the Rust build process and links against it.
+xpoa 生成 DNA 测序的 partial-order alignment (POA) 共识序列,源自 PacBio pbcopper/unanimity。
+**v0.5.0 起为双后端架构**:
+
+- **Rust 后端**(`src/native/`,默认推荐):纯 Rust 重写,零 C++/Boost/SeqAn 依赖
+- **C++ 后端**(`cpp_code/`):历史实现,经 bindgen FFI 链接 `libxpoa.a`
+
+两后端**运行时可切换**(见下),结果保证逐字符一致(由差分测试体系保证)。
 
 ## Key Build Commands
 
 ```bash
-# Build the project (compiles C++ code via build.rs)
-cargo build
-
-# Run tests
-cargo test
-
-# Run a specific test
-cargo test test_poa_consensus
-
-# Build for release
-cargo build --release
-
-# Run clippy linter
-cargo clippy
-
-# Check formatting
-cargo fmt --check
-
-# Generate documentation
-cargo doc --open
+cargo build --release          # 默认构建:Rust + C++ 双后端(需要 cmake + third_party 头文件)
+cargo test --release           # 全部测试:单测 + 差分(golden + 属性式)
+cargo test --release --no-default-features   # 纯 Rust 构建(无 cmake/Boost/SeqAn)
+cargo bench                    # criterion 双后端性能对比
+cargo clippy --release --all-targets && cargo fmt --check
 ```
 
-## Development
+### Backend Selection(运行时)
 
-### Build Process
+`PoaSetting` 末尾的 `backend` 字段:`xpoa::BACKEND_CPP`(0,历史默认)或 `xpoa::BACKEND_RUST`(1)。
+`get_default_poa_setting()` 返回当前构建下可用的默认后端。
+C++ 后端被裁掉(`--no-default-features`)时选 CPP 返回 `Err(XpoaError::CxxBackendUnavailable)`。
 
-The C++ code is built via a custom `build.rs` script:
-1. Copies `cpp_code/` to `OUT_DIR` during build
-2. Runs CMake to configure and build the C++ static library (`libxpoa.a`)
-3. Links against the static library, `libm`, `libz`, and `libstdc++`
-4. CMake generates a build directory in `OUT_DIR/xpoa/build/`
+### Public API(返回 Result)
 
-### Building from Scratch
+三个入口均返回 `XpoaResult<Option<(String, usize)>>`(`src/error.rs`):
+`Ok(Some((consensus, n_passes)))` 为正常结果;`Ok(None)` 表示空 read 集合(历史语义);
+`Err(XpoaError)` 为输入/配置错误 —— 空读、NUL 字节、非法 version、非法碱基(RC 路径)、
+纯 Rust 构建下选 cpp 后端。校验在进入任何后端之前完成,两后端行为一致。
 
-To rebuild the C++ code:
-```bash
-rm -rf target
-cargo build
-```
+## Differential Testing(一致性保证体系)
 
-### Regenerating Bindgen Header (for header changes)
+迁移正确性由三层测试保证,任何算法改动后必须全部通过:
 
-```bash
-bindgen PoaDraft.h \
-  -o ../src/xpoa_sys.rs \
-  --allowlist-function "PoaDraft.*" \
-  -- \
-  -x c++ \
-  -std=c++17 \
-  -I. \
-  -I/usr/include/c++/13 \
-  -I/usr/include/x86_64-linux-gnu/c++/13
-```
+1. **Golden 快照**(`tests/golden/*.json`,161 case):`cargo run --release --example golden_gen`
+   以 C++ 后端生成期望值,`tests/golden_tests.rs` 断言 Rust 后端重现。
+2. **属性式对拍**(`tests/diff_tests.rs`):随机生成的用例在同一进程内实时对拍两后端。
+3. **单元/穷举对拍**(`src/native/*` 各模块 `#[cfg(test)]`):edlib 对暴力 DP、种子查找对
+   穷举搜索等独立参照。
+
+### Debugging Tools(差分定位)
+
+- `examples/native_case.rs` / `tools/dump_case.cpp`:参数化重放(读 TSV),输出每条 read
+  后的图状态与中间共识,用于双端二分定位
+- `tools/dump_cols.cpp` / `examples/native_dump.rs`:dump DP 列原始内容(score/move/prev)
 
 ## Architecture
 
-### Rust Side Structure
+### Rust Side
 
 ```
 src/
-├── lib.rs           # Main public API, wrapper functions for C++ functions
-├── xpoa.rs          # Rust types and traits for the Poa API (TSubread, PoaResult)
-├── xpoa_sys.rs      # Bindgen-generated FFI bindings to C++ functions
-└── dna.rs           # DNA sequence utilities (reverse_complement function)
+├── lib.rs           # 公共 API(poa_consensus*,Result),按 setting.backend 分发
+├── error.rs         # XpoaError 唯一定义点(thiserror)
+├── setting.rs       # PoaSetting 唯一定义点(repr(C),含 backend 字段)
+├── xpoa.rs          # TSubread trait、get_default_poa_setting、PoaResult(cpp)
+├── xpoa_sys.rs      # bindgen FFI(仅 cpp feature)
+├── dna.rs           # poa_consensus_v2 用的 ACGTN 互补表(既有行为,RC 返回 Result)
+├── casegen.rs       # 差分测试用例生成器(含确定性 DetRng)
+└── native/          # 纯 Rust 后端
+    ├── mod.rs           # 入口层(≙ PoaDraft.cpp)
+    ├── sparse_poa.rs    # read 编排(≙ SparsePoa.cpp)
+    ├── poa_graph.rs     # 图 + 稀疏 DP 列 + traceback(≙ PoaGraphImpl/Traversals)
+    ├── range_finder.rs  # SdpRangeFinder trait + V1/V2(≙ RangeFinder*)
+    ├── sparse_align.rs  # 锚点入口(≙ SparseAlignment.h)
+    ├── chain_seeds.rs   # SDP 种子链接(≙ ChainSeeds.h)
+    ├── find_seeds.rs    # multiset<Seed> 语义(≙ FindSeeds.h/Seeds.h)
+    ├── qgram.rs         # q-gram 索引(≙ Index/Hashing/IndexHits)
+    ├── seed.rs          # Seed 类型(≙ Seed.h)
+    ├── edlib.rs         # Myers 位向量 NW 距离(≙ edlib 子集)
+    └── sequence.rs      # IUPAC 全互补表(≙ Sequence.cpp)
 ```
 
-**Key Rust Components:**
-- `TSubread` trait: Abstraction for input reads with methods `get_seq()`, `get_cx()`, `is_fwd()`
-- `PoaSetting`: C++ struct exposed via FFI with alignment parameters
-- `PoaResult`: Wrapper around C++ `Result` with `seq()` and `n_passes()` methods
-- `get_default_poa_setting()`: Returns default alignment configuration
+**模块边界原则**:每模块单一职责、与 C++ 文件一一对应(便于差分定位);
+`poa_graph` 只依赖 `SdpRangeFinder` trait(V1/V2 经 `Box<dyn>` 注入);
+后端分发用 `match`(两后端签名不同,不做 trait 抽象)。
 
-**Public API Functions in `lib.rs`:**
-- `poa_consensus()`: Basic consensus generation
-- `poa_consensus_fwd()`: Forward strand only variant
-- `poa_consensus_v2()`: Handles mixed orientation reads (reverses non-forward reads)
-- `poa_consensus_with_fwd_string()`: Optimized for pre-verified forward strands
+### C++ Side(保留未改)
 
-### C++ Side Structure
+`cpp_code/` 原样保留(仅 `Settings.h` 末尾加了 `backend` 字段用于布局同步,C++ 端忽略其值)。
+`build.rs` 在 `CARGO_FEATURE_CPP` 存在时经 CMake 构建 `libxpoa.a`。
 
-```
-cpp_code/
-├── PoaDraft.h              # C extern interface, defines Subread and Result structs
-├── PoaConsensus.h          # Core consensus computation class
-├── SparsePoa.h             # Sparse partial-order alignment
-├── Settings.h              # PoaSetting definition
-├── Sequence.h              # DNA sequence representation
-├── edlib/                  # Edlib alignment library (local alignment)
-│   ├── edlib.h
-│   ├── AlignmentTools.h
-│   └── ...
-├── PoaGraph*.h,*.cpp       # Graph-based alignment structures
-├── PoaAlignmentMatrix.*    # Alignment matrix computation
-└── CMakeLists.txt          # C++ build configuration
-```
+## Fidelity Notes(移植必须知道的行为细节)
 
-**Key C++ Components:**
-- `PoaDraftGen()`: Main consensus generation function (all orientations)
-- `PoaDraftGenWithAllFwdStrand()`: Optimized when all reads are forward strand
-- `PoaGraph`: Partial-order alignment graph structure
-- `SparsePoa`: Sparse alignment implementation
+1. **FwdStrand 怪癖**:`PoaDraftGenWithAllFwdStrand` 用默认构造的 `SparsePoa`
+   (**固定 V1 RangeFinder**,`setting.version` 被忽略)。
+2. **V2 RangeFinder UB**:C++ `RangeFinderV2.cpp` 的 "add more bound" 循环在
+   `cssPos+i` 超出共识路径时越界读(UB)。Rust 按**预期语义**跳过越界下标 ——
+   这是算法行为上与 C++ 的唯一有意差异(C++ 触发 UB 的输入不可复现,属不可靠
+   行为)。此外错误处理层面的统一拦截见第 7 条。
+3. **BGL setS 去重**:`add_edge` 等价边自动去重 → `HashSet<(u,v)>` 查重。
+4. **顶点 id 恒等**:external == internal == vertex_index == 插入序(PruneGraph 不可达)。
+5. **std::set 等价拒绝**:种子层 sweepSet/colSet/Seeds(multiset)的排序与等价拒绝
+   语义在 `chain_seeds.rs`/`find_seeds.rs` 有逐条对应实现。
+6. **RC 表差异**:native 内部用 C++ 的 IUPAC 全表(`native/sequence.rs`);
+   `poa_consensus_v2` 的 Rust 侧预处理保持 `dna.rs` 的 ACGTN 表(既有行为)。
+7. **错误处理(两后端统一)**:公共 API 返回 `Result<Option<(String, usize)>, XpoaError>`
+   (`src/error.rs`,thiserror)。空 read(`EmptyRead`)、NUL 字节(`NulByte`)、非法
+   version(`InvalidVersion`)在进入任何后端前统一拦截 —— C++ 对这些输入会
+   segfault / 异常穿越 FFI(UB);非法碱基(`InvalidBase`)在 RC 路径返回 Err
+   (对应 C++ throw)。`Ok(None)` 保留空 read 集合的历史语义。
+8. `consensusPath` 的 `-0.0001f` tie-break、`makeAlignmentColumnForExit` 的
+   插入序 first-wins、`inEdges` 按 (src,dst) 排序 —— 均已精确复刻,改动前先看差分。
 
-## Key Concepts
+## Default Parameters
 
-### Orientation Flags
-- `cx == 3`: Forward strand (cx3_cnt tracked for assertions)
-- `cx` with reverse complement: Non-forward reads require reversal before processing
-
-### Version Modes
-- `version: 1`: Default PoaDraft behavior
-- `version: 2`: RangeFinder2 mode (newer algorithm)
-
-### Default Parameters
 ```rust
 PoaSetting {
-    min_identity: 0.82,     // Minimum sequence identity threshold
-    match_score: 3,         // Match scoring
-    mismatch_score: -5,     // Mismatch penalty
-    insertion_score: -2,    // Insertion penalty
-    deletion_score: -2,     // Deletion penalty
-    ed_unify_strand: 1,     // Edlib unify strand flag
-    version: 1,             // Algorithm version
+    min_identity: 0.82, match_score: 3, mismatch_score: -5,
+    insertion_score: -2, deletion_score: -2,
+    ed_unify_strand: 1, version: 1,   // 2 = RangeFinderV2
+    backend: /* 构建决定 */,
 }
 ```
 
-## Testing
+## Third-party(C++ 构建期依赖,不进 git)
 
-Tests are defined in `src/lib.rs`:
-- `test_poa_consensus()`: Basic consensus with identical reads
-- `test_poa_consensus_range_finder2()`: Tests version 2 (RangeFinder2)
-- `test_poa_consensus_very_short()`: Edge cases with short sequences
+`third_party/README.md` 有完整获取步骤(boost 1.74 头文件、seqan 2.4.0 头文件);
+`build.rs` 自动把存在的目录注入 `-I`。纯 Rust 构建完全不需要它们。
 
-## Files of Interest for Modifications
+## Benchmark
 
-| File | Purpose |
-|------|---------|
-| `src/lib.rs` | Primary Rust API, consensus functions |
-| `src/xpoa.rs` | Rust type abstractions (TSubread, PoaResult) |
-| `src/dna.rs` | DNA reverse complement utilities |
-| `cpp_code/PoaDraft.h` | C++ FFI interface definition |
-| `build.rs` | Build script for C++ compilation |
-| `cpp_code/PoaConsensus.h` | Core C++ consensus logic |
-| `cpp_code/SparsePoa.h` | Sparse alignment algorithm |
+`cargo bench`(criterion):Rust 后端在典型负载(30×1.5kb、100×500bp、50×60bp,
+v1/v2)下稳定 **≈2.1× 快于 C++ 后端**(消除 BGL setS 节点分配与指针比较)。

@@ -1,0 +1,71 @@
+{
+  "case": {
+    "mode": "gen",
+    "name": "grid_l50_e0.05_n10_v2_u1",
+    "reads": [
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GTGTAGACCCTGGCGGCTACACTTCTGTGTCCATCCCGAATCCAGAGAGA"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GTGTAGACCCGTGCGGCTACACTTCTGTGTCCAACCCCGAATCCAGAGAGA"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GTGTAGACCCGTGCGGCTACACTTCTTAGTCCATCCCGAATCCAGAGAGA"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GTGTAGACCCGTGAGGCTACACTTCTGTAGTCCATCCCGAATCCAGAGATGA"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GTGTAGACCCGTGCGGCTACACTTCTGTGTCCATCCCTGAATCCAGAGAGA"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GTGTAGACCCGTGCGGCTACAACTTCTGTGTCCATCCGGAATCCAGAGAGA"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GTGTAGACCCGGCGGCTACTCTTCTGTGTCCATCCCGATCCAGAGAGA"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GTGTGACCCGTGCGGCTACACTTCTGTGTCATCCCGAATCCAGAGAGA"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GTGTAGACCAGTGCGGCTACACTTTTGTGTCCATCCCGAATCCAGAGAGA"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GTGTAGACCCGTGCCGGCTACAACTTCTGTGTCCATCCCGAATCCAGAGAGA"
+      }
+    ],
+    "setting": {
+      "deletion_score": -2,
+      "ed_unify_strand": 1,
+      "insertion_score": -2,
+      "match_score": 3,
+      "min_identity": 0.8199999928474426,
+      "mismatch_score": -5,
+      "version": 2
+    }
+  },
+  "result": {
+    "n_passes": 10,
+    "seq": "GTGTAGACCCGTGCGGCTACACTTCTGTGTCCATCCCGAATCCAGAGAGA"
+  }
+}

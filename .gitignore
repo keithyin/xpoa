@@ -1,2 +1,5 @@
 /target
 cpp_code/build
+third_party/boost
+third_party/seqan
+/.zcode
