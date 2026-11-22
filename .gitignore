@@ -1,3 +1,7 @@
 /target
 cpp_code/build
 /.vscode
+xpoa/cpp_code/build
+xpoa/third_party/boost
+xpoa/third_party/seqan
+/.zcode

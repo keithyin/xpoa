@@ -1,0 +1,36 @@
+{
+  "case": {
+    "mode": "gen",
+    "name": "grid_l50_e0.1_n3_v2_u1",
+    "reads": [
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "AAAGGTCAGGCAGGCATAAGCCCGCGAGTTAACTATTGCACACCCCAGAGG"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "AACGGTCAGGCGGGCATAAGCCCCGAGTAGTTAACTATTGCCACTCCAGTAGG"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "AAGAGGTGAAGGCGGGCATAAGCCCGAGAGTTAACTATGTGCCACCCAGAGGG"
+      }
+    ],
+    "setting": {
+      "deletion_score": -2,
+      "ed_unify_strand": 1,
+      "insertion_score": -2,
+      "match_score": 3,
+      "min_identity": 0.8199999928474426,
+      "mismatch_score": -5,
+      "version": 2
+    }
+  },
+  "result": {
+    "n_passes": 3,
+    "seq": "AAAGGTCAGGCGGGCATAAGCCCGAGAGTTAACTATTGCCACCCCAGAGGG"
+  }
+}

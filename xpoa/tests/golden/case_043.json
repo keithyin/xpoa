@@ -1,0 +1,71 @@
+{
+  "case": {
+    "mode": "gen",
+    "name": "grid_l50_e0.15_n10_v2_u1",
+    "reads": [
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GATCTGATCCCGTGGGACTTCACGGGCTCTAGCGACGGTGCCCACGTG"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GGATCTGATCCCTGGGACCTCACGGGCCTCCAGCGAGGTGCCCAACGTG"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GGATTCTGACTCCCTGGGACCTACCGGGCGTCAAGCGACTGTGCCACGTG"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "AGATCTGATCCGGGACCTCACCGGGCGTCCAGCGACGTGTCCAACGTG"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GGATCTGACCCCTGGGAACCTCACCCGGCTCTAGCCACGTGCGCAAGTG"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GGATCGATCCCGGACCTCACCGGGCGTCTAGCGCGTGCCCAGCGTT"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GGAGATGACTCCCTGGGACTCTCACCGAGGACGGTTATCCGACGTGCCCAACGTG"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GGACTCTGTCCTGGGCCTCTCCGGGCGTCTCGCGACTGCCAAACGTG"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "GGATCTGGATCCCTGGGCCTCACCGGGGTCTAGCGACGTGCCCACGTG"
+      },
+      {
+        "flags": 3,
+        "is_fwd": true,
+        "seq": "CGGATCAACCCCCTGGGACTCACCGGGCGTTCTAGCGCGGCCCGAACGTG"
+      }
+    ],
+    "setting": {
+      "deletion_score": -2,
+      "ed_unify_strand": 1,
+      "insertion_score": -2,
+      "match_score": 3,
+      "min_identity": 0.8199999928474426,
+      "mismatch_score": -5,
+      "version": 2
+    }
+  },
+  "result": {
+    "n_passes": 9,
+    "seq": "GGATCTGATCCCTGGGACCTACCGGGCGTCTAGCGACGTGCCCAACGTG"
+  }
+}
