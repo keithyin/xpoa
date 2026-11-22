@@ -3,6 +3,37 @@
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/);
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.6.0] - 2026-11-22
+
+移除 C++ 后端,只保留纯 Rust 实现。本次为 breaking release。
+
+### Removed
+
+- **breaking**:`xpoa/cpp_code/`(C++ 源码)、`xpoa/third_party/`(Boost/SeqAn
+  头文件)、`build.rs`(CMake 构建)、bindgen FFI(`src/xpoa_sys.rs`)、
+  `cpp` feature 全部删除 —— 构建不再需要 cmake/Boost/SeqAn/zlib
+- **breaking**:`PoaSetting` 移除 `backend` 字段;`BACKEND_CPP`/`BACKEND_RUST`
+  常量、`XpoaError::CxxBackendUnavailable` 变体删除
+- **breaking**:`xpoa-cli` 移除 `--backend` 参数;`--no-default-features`
+  构建变体不再有意义(features 已全部移除)
+- `tests/diff_tests.rs`(双后端实时对拍)与差分调试工具
+  `tools/cpp_dump.cpp` 随双后端架构移除
+
+### Changed
+
+- `tests/golden/` 161 个快照转为纯回归基线:v0.5.0 时由 C++ 后端生成、
+  Rust 后端经 golden + 属性对拍验证逐字符一致;`examples/golden_gen.rs`
+  改用当前实现重生成,输出与既有基线逐字节相同(CI 保留重生成复现校验)
+- C++ 侧经全面功能清点确认无可用缺失:其相对 Rust 多出的代码(约 2500 行
+  Mutation/findPossibleVariants/CIGAR 工具箱/GraphViz 导出/PruneGraph 等)
+  均不可从 FFI 导出的两个入口(`PoaDraftGen`/`PoaDraftGenWithAllFwdStrand`)
+  到达,属 pbcopper/unanimity 遗留死代码或差分调试工具
+
+### Performance
+
+- 与 v0.5.0 的 C++ 后端相比,纯 Rust 实现快约 **2.1×**(criterion 实测,
+  30×1.5kb / 100×500bp / 50×60bp reads,v1/v2 全场景)。
+
 ## [0.5.0] - 2026-11-21
 
 C++ 核心算法完全以 Rust 重写,双后端共存、运行时可切换,结果逐字符一致,

@@ -1,8 +1,11 @@
-//! 生成 golden 差分数据:`cargo run --release --example golden_gen`
+//! 生成 golden 回归基线:`cargo run --release --example golden_gen`
 //!
-//! 对 `src/casegen.rs` 产出的全部用例跑 **C++ 后端**,把
+//! 对 `src/casegen.rs` 产出的全部用例跑当前实现,把
 //! `(consensus, n_passes)` 固化到 `tests/golden/case_NNN.json`。
-//! 这些文件即"结果一致性"的基准:Rust 后端必须产出完全相同的输出。
+//!
+//! 历史说明:这些快照最初在 v0.5.0 由 C++ 后端生成,当时 Rust 后端经
+//! golden + 属性式对拍验证与其逐字符一致;0.6.0 移除 C++ 后端后,本工具
+//! 改用当前实现重生成,输出与既有基线逐字节相同(CI 有重生成校验)。
 
 use std::fs;
 use std::path::Path;
@@ -19,8 +22,6 @@ pub fn to_poa_setting(s: &TestSetting) -> PoaSetting {
         deletion_score: s.deletion_score,
         ed_unify_strand: s.ed_unify_strand,
         version: s.version,
-        // golden 的期望值以 C++ 后端产出为准
-        backend: xpoa::BACKEND_CPP,
     }
 }
 
@@ -51,7 +52,7 @@ fn main() {
 
     let mut failures = Vec::new();
     for (i, case) in cases.iter().enumerate() {
-        let result = run_case(case).expect("cpp backend error");
+        let result = run_case(case).expect("backend error");
         let json = serde_json::json!({
             "case": case,
             "result": result.as_ref().map(|(seq, n)| {

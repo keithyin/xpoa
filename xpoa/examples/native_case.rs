@@ -1,4 +1,5 @@
-//! 参数化 case 重放(native 侧):与 tools/dump_case.cpp 输出对齐。
+//! 参数化 case 重放(TSV):按模式重放 POA 流程并输出图状态,
+//! 用于差分定位(历史上曾与已移除的 tools/dump_case.cpp 输出对齐)。
 //! 用法:native_case <tsv> <n_reads> <mode:0=orient|1=unify|2=fwd>
 
 use std::fs;
@@ -46,7 +47,7 @@ fn main() {
     let reads: Vec<(String, i32)> = reads.into_iter().take(n).collect();
     let fwd_flags: Vec<Option<bool>> = fwd_flags.into_iter().take(n).collect();
 
-    // mode=3:直接走公共入口 poa_consensus_v2(含 v2 预处理与后端分发)
+    // mode=3:直接走公共入口 poa_consensus_v2(含 v2 预处理)
     if mode == 3 {
         use xpoa::casegen::TestRead;
 
@@ -67,9 +68,8 @@ fn main() {
             deletion_score: -2,
             ed_unify_strand: 1,
             version: 1,
-            backend: xpoa::BACKEND_RUST,
         };
-        let result = xpoa::poa_consensus_v2(&test_reads, &setting).expect("native backend error");
+        let result = xpoa::poa_consensus_v2(&test_reads, &setting).expect("backend error");
         if let Some((seq, np)) = result {
             println!("consensus: {seq}");
             println!("n_passes: {np}");

@@ -1,19 +1,18 @@
-//! cpp / rust 双后端性能对比基准:`cargo bench`
+//! 性能基准:`cargo bench`
 //!
 //! 场景(近似 PacBio CCS reads):
 //! - A:30 reads × 1.5kb × 12% 错误(单碱基流共识的典型负载)
 //! - B:100 reads × 500bp × 10% 错误(高覆盖短读)
 //! - C:50 reads × 60bp × 8% 错误(短读,RangeFinder 锚点稀疏)
 //!
-//! 每个场景分别在 version 1/2 下跑 poa_consensus(cpp 后端与 rust 后端,
-//! 同一二进制运行时切换)。
+//! 每个场景分别在 version 1/2 下跑 poa_consensus。
 
 use std::time::Duration;
 
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 
+use xpoa::PoaSetting;
 use xpoa::casegen::TestRead;
-use xpoa::{BACKEND_CPP, BACKEND_RUST, PoaSetting};
 
 /// 与 src/casegen::DetRng 相同的确定性 RNG(基准输入可复现)
 struct DetRng {
@@ -76,29 +75,26 @@ fn bench_scenario(c: &mut Criterion, name: &str, reads: &[TestRead]) {
     group.measurement_time(Duration::from_secs(10));
 
     for &version in [1i32, 2i32].iter() {
-        for (tag, backend) in [("cpp", BACKEND_CPP), ("rust", BACKEND_RUST)] {
-            let setting = PoaSetting {
-                min_identity: 0.82,
-                match_score: 3,
-                mismatch_score: -5,
-                insertion_score: -2,
-                deletion_score: -2,
-                ed_unify_strand: 1,
-                version,
-                backend,
-            };
-            group.bench_with_input(
-                BenchmarkId::new(format!("v{version}"), tag),
-                reads,
-                |b, reads| {
-                    b.iter(|| {
-                        let result = xpoa::poa_consensus(black_box(reads), black_box(&setting))
-                            .expect("benchmark inputs are valid");
-                        debug_assert!(result.is_some());
-                    })
-                },
-            );
-        }
+        let setting = PoaSetting {
+            min_identity: 0.82,
+            match_score: 3,
+            mismatch_score: -5,
+            insertion_score: -2,
+            deletion_score: -2,
+            ed_unify_strand: 1,
+            version,
+        };
+        group.bench_with_input(
+            BenchmarkId::new("poa", format!("v{version}")),
+            reads,
+            |b, reads| {
+                b.iter(|| {
+                    let result = xpoa::poa_consensus(black_box(reads), black_box(&setting))
+                        .expect("benchmark inputs are valid");
+                    debug_assert!(result.is_some());
+                })
+            },
+        );
     }
     group.finish();
 }

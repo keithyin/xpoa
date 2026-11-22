@@ -1,17 +1,10 @@
 [package]
 name = "xpoa"
-version = "0.5.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 description = "xpoa"
-license = "MIT"
-repository ="https://github.com/keithyin/xpoa"
-[build-dependencies]
-num_cpus = "1.16.0"
-
-[features]
-# 关闭后为纯 Rust 构建:不编译 C++(无需 cmake/Boost/SeqAn),选 cpp 后端返回错误
-default = ["cpp"]
-cpp = []
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 # casegen(差分测试基础设施)随 crate 提供,序列化其用例结构

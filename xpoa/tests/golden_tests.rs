@@ -1,6 +1,6 @@
-//! Golden 一致性测试:读取 `tests/golden/*.json`(期望值由 C++ 后端生成,
-//! 见 `examples/golden_gen.rs`),断言当前默认后端产出完全一致的
-//! `(consensus, n_passes)`。
+//! Golden 回归测试:读取 `tests/golden/*.json`(回归基线,v0.5.0 时由 C++
+//! 后端生成并经双后端差分验证一致;重生成见 `examples/golden_gen.rs`),
+//! 断言当前实现产出完全一致的 `(consensus, n_passes)`。
 //!
 //! 依赖 serde_json/serde,仅测试期使用。
 
@@ -8,11 +8,9 @@ use std::fs;
 use std::path::Path;
 
 use xpoa::casegen::TestCase;
-use xpoa::{BACKEND_RUST, poa_consensus, poa_consensus_fwd, poa_consensus_v2};
+use xpoa::{poa_consensus, poa_consensus_fwd, poa_consensus_v2};
 
 fn run_case(case: &TestCase) -> Result<Option<(String, usize)>, xpoa::error::XpoaError> {
-    // golden 期望值由 C++ 后端生成;此处用 **Rust 后端** 重现,即
-    // "结果一致性"的验收断言
     let setting = golden_gen_setting(case);
     match case.mode.as_str() {
         "gen" => poa_consensus(&case.reads, &setting),
@@ -22,7 +20,7 @@ fn run_case(case: &TestCase) -> Result<Option<(String, usize)>, xpoa::error::Xpo
     }
 }
 
-/// 与 examples/golden_gen.rs 中的 to_poa_setting 保持一致,但强制 Rust 后端
+/// 与 examples/golden_gen.rs 中的 to_poa_setting 保持一致
 fn golden_gen_setting(case: &TestCase) -> xpoa::PoaSetting {
     let s = &case.setting;
     xpoa::PoaSetting {
@@ -33,7 +31,6 @@ fn golden_gen_setting(case: &TestCase) -> xpoa::PoaSetting {
         deletion_score: s.deletion_score,
         ed_unify_strand: s.ed_unify_strand,
         version: s.version,
-        backend: BACKEND_RUST,
     }
 }
 
@@ -54,7 +51,7 @@ fn collect_golden_files() -> Vec<std::path::PathBuf> {
 // 数量级以上 —— 请用 `cargo test --release` 运行
 #[test]
 #[cfg_attr(debug_assertions, ignore = "heavy: run with --release")]
-fn rust_backend_matches_golden() {
+fn implementation_matches_golden() {
     let files = collect_golden_files();
     let mut checked = 0usize;
     for path in &files {
@@ -64,7 +61,7 @@ fn rust_backend_matches_golden() {
             serde_json::from_value(value["case"].clone()).expect("parse case from golden");
         let expected = &value["result"];
 
-        let actual = run_case(&case).expect("rust backend error");
+        let actual = run_case(&case).expect("backend error");
 
         let actual_json = actual
             .as_ref()

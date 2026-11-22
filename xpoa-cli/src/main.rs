@@ -16,12 +16,12 @@ use std::sync::mpsc::{Receiver, SyncSender, channel, sync_channel};
 use std::thread;
 use std::time::Duration;
 
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
 use rayon::ThreadPoolBuilder;
 use xpoa::error::XpoaResult;
 use xpoa::xpoa::get_default_poa_setting;
-use xpoa::{BACKEND_CPP, BACKEND_RUST, PoaSetting, poa_consensus};
+use xpoa::{PoaSetting, poa_consensus};
 
 /// reader → 主线程的消息;Eof 用于区分正常读完与 reader 异常退出。
 enum Msg {
@@ -61,10 +61,6 @@ struct Cli {
     #[arg(short, long, default_value_t = 0, value_name = "N")]
     threads: usize,
 
-    /// POA 后端(缺省 = 编译期默认;纯 Rust 构建下选 cpp 会报错)
-    #[arg(long, value_enum, value_name = "BACKEND")]
-    backend: Option<BackendArg>,
-
     /// POA 算法版本(1 或 2)
     #[arg(long, default_value_t = 1, value_name = "1|2")]
     poa_version: i32,
@@ -72,21 +68,6 @@ struct Cli {
     /// 输出 FASTA 折行宽度(0 = 单行)
     #[arg(short = 'w', long, default_value_t = 60, value_name = "N")]
     line_width: usize,
-}
-
-#[derive(Debug, Clone, Copy, ValueEnum)]
-enum BackendArg {
-    Cpp,
-    Rust,
-}
-
-impl BackendArg {
-    fn backend(self) -> i32 {
-        match self {
-            Self::Cpp => BACKEND_CPP,
-            Self::Rust => BACKEND_RUST,
-        }
-    }
 }
 
 #[derive(Default)]
@@ -120,9 +101,6 @@ fn run(cli: &Cli) -> Result<(), String> {
             .map_err(|e| format!("build rayon thread pool: {e}"))?;
     }
     let mut setting = get_default_poa_setting();
-    if let Some(backend) = cli.backend {
-        setting.backend = backend.backend();
-    }
     setting.version = cli.poa_version;
 
     let pb = new_spinner();

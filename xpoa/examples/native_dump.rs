@@ -1,13 +1,13 @@
-//! 调试工具:用 native 后端重建 case_004 的流程,输出每步图节点表,
-//! 与 tools/cpp_dump.cpp 的输出对拍。
+//! 调试工具:重建 case_004 的流程,输出每步图节点表与 DP 列原始内容,
+//! 供人工检查与差分定位(历史上曾与已移除的 tools/cpp_dump.cpp 对拍)。
 
 use std::fs;
 
+use xpoa::PoaSetting;
 use xpoa::native::poa_graph::PoaGraph;
 use xpoa::native::range_finder::SdpRangeFinderV1;
 use xpoa::native::sequence::reverse_complement;
 use xpoa::native::sparse_poa::{ReadKey, SparsePoa};
-use xpoa::{BACKEND_RUST, PoaSetting};
 
 const ADAPTER_BEFORE: i32 = 1;
 const ADAPTER_AFTER: i32 = 2;
@@ -80,7 +80,6 @@ fn main() {
         deletion_score: -2,
         ed_unify_strand: 0,
         version: 1,
-        backend: BACKEND_RUST,
     };
 
     let mut poa = SparsePoa::new(setting.version).unwrap();
@@ -136,7 +135,7 @@ fn main() {
     let (css, summaries) = poa.find_consensus(min_cov, &setting);
     dump_graph(poa.graph(), "rust_graph_final.csv");
 
-    // 与 tools 侧 dump_cols.cpp 对拍:手动重放并 dump read2 的 DP 列
+    // 手动重放并 dump read2 的 DP 列
     {
         let mut g = PoaGraph::new();
         let mut path = Vec::new();

@@ -1,3 +1,14 @@
 [workspace]
 members = ["xpoa", "xpoa-cli"]
 resolver = "3"
+
+# lib 与 cli 版本锁步:发版时同步更新此处 version 与下方 xpoa 依赖的 version 需求
+# (0.5.x 内升级 xpoa 无需动依赖需求;跨小版本如 0.6.0 两者都要改)
+[workspace.package]
+version = "0.6.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/keithyin/xpoa"
+
+[workspace.dependencies]
+xpoa = { path = "xpoa", version = "0.6.0" }

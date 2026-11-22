@@ -1,7 +1,7 @@
 name: Release
 
 # 推送 v* tag 触发:
-#   1. verify —— 双后端 + 纯 Rust 全量测试,tag 与 Cargo.toml 版本一致性校验
+#   1. verify —— 全量测试,tag 与 Cargo.toml 版本一致性校验
 #   2. publish —— 发布 crates.io(需要仓库 secret CARGO_REGISTRY_TOKEN),
 #      成功后创建 GitHub Release(auto notes)
 #
@@ -20,21 +20,12 @@ env:
 
 jobs:
   verify:
-    name: verify (both backends)
+    name: verify
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Install toolchain deps (cmake / Boost / zlib)
-        run: sudo apt-get update && sudo apt-get install -y build-essential cmake libboost-dev zlib1g-dev
-      - name: Fetch SeqAn 2.4.0 headers (third_party)
-        run: |
-          cd /tmp
-          curl -sL -o seqan240.tar.gz https://github.com/seqan/seqan/archive/refs/tags/seqan-v2.4.0.tar.gz
-          tar xzf seqan240.tar.gz
-          mkdir -p "$GITHUB_WORKSPACE/xpoa/third_party/seqan/include"
-          cp -r seqan-seqan-v2.4.0/include/seqan "$GITHUB_WORKSPACE/xpoa/third_party/seqan/include/seqan"
       - name: Verify tag matches Cargo.toml version
         run: |
           # workspace 下按包名取 xpoa 的版本(packages 顺序不保证)
@@ -45,18 +36,11 @@ jobs:
             exit 1
           fi
           echo "tag v$TAG_VERSION == Cargo.toml $CARGO_VERSION ✓"
-      - name: Test (both backends)
+      - name: Test
         run: cargo test --release
-      - name: Test (pure Rust)
-        run: cargo test --release --no-default-features -p xpoa
-      - name: Package xpoa (default features, verify w/ env-injected headers)
-        env:
-          XPOA_BOOST_INCLUDE: ${{ github.workspace }}/xpoa/third_party/boost/include
-          XPOA_SEQAN_INCLUDE: ${{ github.workspace }}/xpoa/third_party/seqan/include
+      - name: Package xpoa
         run: cargo package -p xpoa
-      - name: Package xpoa (pure Rust)
-        run: cargo package -p xpoa --no-default-features
-      # 注意:xpoa-cli 不能在此处 package/publish —— 其对 xpoa ^0.5.0 的
+      # 注意:xpoa-cli 不能在此处 package/publish —— 其对 xpoa ^0.6.0 的
       # registry 解析要求 xpoa 已发布,故 cli 的打包验证放在 publish job
       # (publish 自带验证构建)。
 
@@ -70,19 +54,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        with:
-          key: no-cpp
-      # 发布的 .crate 内容(features 声明等)与 feature 选择无关;
-      # publish 用纯 Rust 构建执行,无需 C++ 环境。下游若启用 cpp feature
-      # 需自行提供 Boost/SeqAn(见 README)。
       # 顺序:xpoa 先发布并等 crates.io 索引同步后,xpoa-cli 才能解析到
       # 已发布的 xpoa 版本(path 依赖发布时替换为 version 依赖)。
       - name: Publish xpoa
-        run: cargo publish -p xpoa --no-default-features
+        run: cargo publish -p xpoa
       - name: Wait for crates.io index propagation
         run: sleep 30
       - name: Publish xpoa-cli
-        run: cargo publish -p xpoa-cli --no-default-features
+        run: cargo publish -p xpoa-cli
       - name: Create GitHub Release
         run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
         env:

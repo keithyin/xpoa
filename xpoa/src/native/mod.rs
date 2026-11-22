@@ -86,8 +86,8 @@ fn draft_gen_core(
 ) -> XpoaResult<(Vec<u8>, usize, Vec<ReadKey>)> {
     for (i, read) in reads.iter().enumerate() {
         if read.seq.is_empty() {
-            // C++ 端对空 read 会 segfault(threadFirstRead 的 UB);
-            // 两后端统一在入口拒绝
+            // 历史 C++ 后端对空 read 会 segfault(threadFirstRead 的 UB),
+            // 入口层统一拒绝为 Err
             return Err(XpoaError::EmptyRead { index: i });
         }
     }
